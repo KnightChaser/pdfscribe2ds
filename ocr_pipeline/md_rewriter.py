@@ -74,6 +74,12 @@ def rewrite_md_with_embeds(
         str: The rewritten markdown text with updated image references.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    # NOTE:
+    # Relative path from markdown file to assets
+    # e.g., markdown/page_001.md --> markdown/page_001_assets/
+    assets_rel = os.path.relpath(output_dir, output_dir.parent)
+
     W, H = image.size
     pieces: List[str] = []
     last = 0
@@ -85,19 +91,25 @@ def rewrite_md_with_embeds(
         label = m.group(1).strip()
         boxes = ast.literal_eval(m.group(2))
         if boxes and isinstance(boxes[0], (int, float)):
-            boxes = [boxes]  # Single box case
+            # Singl box form --> Normalize to list
+            boxes = [boxes]
 
         if label == "image":
             md_snips: List[str] = []
             for box in boxes:
                 x1, y1, x2, y2 = _scale_box(box, W, H)
                 if x2 <= x1 or y2 <= y1:
-                    continue  # Skip invalid boxes
+                    # Invalid or zero-area box (invalid)
+                    continue
 
                 crop = image.crop((x1, y1, x2, y2))
                 crop_name = f"{base_img_name}_img{img_counter:03d}.png"
-                crop.save(output_dir / crop_name)
-                md_snips.append(f"![Image {img_counter}]({crop_name})")
+                crop_path = output_dir / crop_name
+                crop.save(crop_path)
+
+                md_snips.append(
+                    f"![Image {img_counter}](./{assets_rel}/{crop_name})"
+                )
                 img_counter += 1
             pieces.append("\n".join(md_snips) + "\n")
 
