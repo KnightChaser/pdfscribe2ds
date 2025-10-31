@@ -119,6 +119,9 @@ def rewrite_md_with_embeds(
     pieces.append(text_output[last:])  # Add remaining text
     new_md = "".join(pieces)
 
-    # NOTE: Drop any remaining non-image tags (e.g. text, sub_titles)
-    new_md = _NON_IMG_TAG.sub("", new_md)
+    # NOTE: Replace non-image tags with newlines to preserve text separation
+    new_md = _NON_IMG_TAG.sub("\n", new_md)
+    
+    # Clean up excessive newlines
+    new_md = re.sub(r'\n{3,}', '\n\n', new_md)
     return new_md
