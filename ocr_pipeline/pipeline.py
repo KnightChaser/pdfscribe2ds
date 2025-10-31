@@ -10,6 +10,7 @@ from .config import PipelineConfig
 from .pdf_loader import pdf_to_images
 from .ocr_engine import DeepSeekOCREngine
 from .md_rewriter import rewrite_md_with_embeds
+import quiet
 
 def run_pdf_pipeline(
     pdf_path: Path,
@@ -48,7 +49,8 @@ def run_pdf_pipeline(
     )
 
     # 2. Prepare OCR engine
-    ocr = DeepSeekOCREngine(model_name=cfg.model_name)
+    with quiet.quiet_stdio():
+        ocr = DeepSeekOCREngine(model_name=cfg.model_name)
 
      # 3. Per page processing
     md_out_dir = cfg.output_dir / "markdown"
@@ -56,7 +58,8 @@ def run_pdf_pipeline(
 
     for img_path in image_paths:
         # 2.a OCR
-        raw_md = ocr.image_to_markdown(img_path)
+        with quiet.quiet_stdio():
+            raw_md = ocr.image_to_markdown(img_path)
 
         # 2.b rewrite with embeds
         page_stem = img_path.stem  # e.g. "page_001"

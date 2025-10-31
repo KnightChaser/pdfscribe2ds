@@ -3,6 +3,7 @@ from pathlib import Path
 import typer
 
 from ocr_pipeline.pipeline import run_pdf_pipeline
+import quiet
 
 app = typer.Typer(help="PDF --> images --> DeepSeek-OCR --> Markdown")
 
