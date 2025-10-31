@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List
+from typing import List, Optional
+import logging
 
 from PIL import Image
 
@@ -12,13 +13,15 @@ from .ocr_engine import DeepSeekOCREngine
 from .md_rewriter import rewrite_md_with_embeds
 import quiet
 
+logger = logging.getLogger("pdfscribe2ds")
+
 def run_pdf_pipeline(
     pdf_path: Path,
     output_dir: Path,
     model_name: str = "deepseek-ai/DeepSeek-OCR", # NOTE: Fixed
     dpi: int = 200,
-    num_processes: int = None,
-    num_threads: int = None,
+    num_processes: Optional[int] = None,
+    num_threads: Optional[int] = None,
 ) -> None:
     """
     Full PDF -> images -> DeepSeek-OCR -> Markdown pipeline.
@@ -40,6 +43,7 @@ def run_pdf_pipeline(
 
     # 1. PDF -> images/{page-001.png, ...}
     images_out_dir = cfg.output_dir / "images"
+    logger.info(f"Converting PDF to images in {images_out_dir}...")
     image_paths: List[Path] = pdf_to_images(
         pdf_path=cfg.pdf_path,
         out_dir=images_out_dir,
@@ -47,6 +51,7 @@ def run_pdf_pipeline(
         num_processes=num_processes,
         num_threads=num_threads,
     )
+    logger.info("Converted %d pages to images at %s", len(image_paths), images_out_dir)
 
     # 2. Prepare OCR engine
     with quiet.quiet_stdio():
@@ -77,6 +82,6 @@ def run_pdf_pipeline(
         md_file = md_out_dir / f"{page_stem}.md"
         md_file.write_text(cleaned_md, encoding="utf-8")
 
-        print(f"[OK] page {page_stem} --> {md_file}")
+        logger.info(f"[OK] page {page_stem} --> {md_file}")
 
-
+    logger.info(f"Pipeline finished for {pdf_path} --> {cfg.output_dir}")
