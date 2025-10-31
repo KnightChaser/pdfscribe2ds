@@ -22,6 +22,7 @@ def run_pdf_pipeline(
     dpi: int = 200,
     num_processes: Optional[int] = None,
     num_threads: Optional[int] = None,
+    ocr_engine: Optional[DeepSeekOCREngine] = None,
 ) -> None:
     """
     Full PDF -> images -> DeepSeek-OCR -> Markdown pipeline.
@@ -33,6 +34,7 @@ def run_pdf_pipeline(
         dpi (int): Dots per inch for image quality when converting PDF to images.
         num_processes (int, optional): Number of processes for parallel PDF conversion.
         num_threads (int, optional): Number of threads for parallel image saving.
+        ocr_engine (DeepSeekOCREngine, optional): Pre-initialized OCR engine to reuse.
     """
     cfg = PipelineConfig(
         pdf_path=pdf_path,
@@ -54,8 +56,11 @@ def run_pdf_pipeline(
     logger.info("Converted %d pages to images at %s", len(image_paths), images_out_dir)
 
     # 2. Prepare OCR engine
-    with quiet.quiet_stdio():
-        ocr = DeepSeekOCREngine(model_name=cfg.model_name)
+    if ocr_engine is not None:
+        ocr = ocr_engine
+    else:
+        with quiet.quiet_stdio():
+            ocr = DeepSeekOCREngine(model_name=cfg.model_name)
 
      # 3. Per page processing
     md_out_dir = cfg.output_dir / "markdown"

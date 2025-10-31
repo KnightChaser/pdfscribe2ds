@@ -6,6 +6,8 @@ from typing import Iterable, Optional
 import logging
 
 from .pipeline import run_pdf_pipeline
+from .ocr_engine import DeepSeekOCREngine
+import quiet
 
 logger = logging.getLogger("pdfscribe2ds")
 
@@ -56,6 +58,11 @@ def run_batch(
 
     logger.info("Found %d PDF(s) in %s", len(pdfs), pdf_dir)
 
+    # Initialize OCR engine once for reuse across all PDFs
+    logger.info("Initializing DeepSeek-OCR engine with model: %s", model_name)
+    with quiet.quiet_stdio():
+        ocr_engine = DeepSeekOCREngine(model_name=model_name)
+
     for idx, pdf_path in enumerate(pdfs, start=1):
         pdf_out_dir = output_dir / pdf_path.stem
         logger.info("[%d/%d] Processing %s --> %s", idx, len(pdfs), pdf_path, pdf_out_dir)
@@ -68,6 +75,7 @@ def run_batch(
             dpi=dpi,
             num_processes=num_processes,
             num_threads=num_threads,
+            ocr_engine=ocr_engine,
         )
 
     logger.info("Batch finished. Outputs --> %s", output_dir)
