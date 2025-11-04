@@ -21,20 +21,16 @@ os.environ["TORCH_CPP_LOG_LEVEL"] = "ERROR"
 
 # Python-level warnings & logging
 warnings.filterwarnings("ignore")
-logging.basicConfig(level=logging.ERROR)
-logging.getLogger().setLevel(logging.ERROR)
 
-# Silence specific library loggers
-logging.getLogger('vllm').setLevel(logging.ERROR)
-logging.getLogger('transformers').setLevel(logging.ERROR)
-logging.getLogger('torch').setLevel(logging.ERROR)
-logging.getLogger('torch.distributed').setLevel(logging.ERROR)
-logging.getLogger('PIL').setLevel(logging.ERROR)
-logging.getLogger('pdf2image').setLevel(logging.ERROR)
+def apply_library_quiet_logging() -> None:
+    """
+    Set logging levels for various libraries to ERROR to suppress verbose output.
+    """
+    for name in ("vllm", "transformers", "torch", "torch.distributed", "PIL", "pdf2image"):
+        logging.getLogger(name).setLevel(logging.ERROR)
 
-# ultra-quiet context (redirects C/C++ stderr spam)
 @contextlib.contextmanager
 def quiet_stdio():
-    with open(os.devnull, "w") as devnull:
-        with contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
-            yield
+    apply_library_quiet_logging()
+    with open(os.devnull, "w") as devnull, contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
+        yield
