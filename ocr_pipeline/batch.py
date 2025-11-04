@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Iterable, Optional
+import typer
 import logging
 
 from .pipeline import run_pdf_pipeline
@@ -31,6 +32,7 @@ def run_batch(
     dpi: int = 200,
     num_processes: Optional[int] = None,
     num_threads: Optional[int] = None,
+    gpu_mem: float = typer.Option(0.7, help="Fraction of GPU memory to utilize for OCR engine")
 ) -> None:
     """
     Run the single-PDF pipeline over every PDF in `pdf_dir`.
@@ -61,7 +63,7 @@ def run_batch(
     # Initialize OCR engine once for reuse across all PDFs
     logger.info("Initializing DeepSeek-OCR engine with model: %s", model_name)
     with quiet.quiet_stdio():
-        ocr_engine = DeepSeekOCREngine(model_name=model_name)
+        ocr_engine = DeepSeekOCREngine(model_name=model_name, gpu_memory_utilization=gpu_mem)
 
     for idx, pdf_path in enumerate(pdfs, start=1):
         pdf_out_dir = output_dir / pdf_path.stem
