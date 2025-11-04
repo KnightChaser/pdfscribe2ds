@@ -4,8 +4,31 @@ from __future__ import annotations
 import multiprocessing
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
+
 from pdf2image import convert_from_path, pdfinfo_from_path
+
+def _page_ranges(total_pages: int, num_chunks: int) -> List[Tuple[int, int]]:
+    """
+    Divide total pages into num_chunks ranges.
+
+    Args:
+        total_pages (int): Total number of pages in the PDF
+        num_chunks (int): Number of chunks to divide into
+
+    Returns:
+        List[Tuple[int, int]]: List of (start_page, end_page) tuples
+    """
+    num_chunks = max(1, min(num_chunks, total_pages))
+    base, rem = divmod(total_pages, num_chunks)
+    ranges = []
+    start = 1
+    for i in range(num_chunks):
+        size = base + (1 if i < rem else 0)
+        end = start + size - 1
+        ranges.append((start, end))
+        start = end + 1
+    return ranges
 
 def _convert_page_range(
     pdf_path: str,
@@ -84,19 +107,8 @@ def pdf_to_images(
     if total_pages == 0:
         return []
     
-    # Divide pages into chunks for parallel processing
-    pages_per_process = max(1, total_pages // num_processes)
-    page_ranges = []
-    
-    start_page = 1
-    for _ in range(num_processes):
-        end_page = min(start_page + pages_per_process - 1, total_pages) # inclusive
-        if start_page <= end_page:
-            page_ranges.append((start_page, end_page))
-        start_page = end_page + 1 # move to next range
-        if start_page > total_pages:
-            break
-    
+    page_ranges = _page_ranges(total_pages, num_processes)
+
     # Convert page ranges in parallel using multiprocessing
     with multiprocessing.Pool(processes=len(page_ranges)) as pool:
         results = pool.starmap(
