@@ -67,26 +67,30 @@ def run_pdf_pipeline(
     md_out_dir.mkdir(parents=True, exist_ok=True)
 
     for img_path in image_paths:
-        # 2.a OCR
-        with quiet.quiet_stdio():
-            raw_md = ocr.image_to_markdown(img_path)
+        try:
+            with quiet.quiet_stdio():
+                raw_md = ocr.image_to_markdown(img_path)
 
-        # 2.b rewrite with embeds
-        page_stem = img_path.stem  # e.g. "page_001"
-        assets_dir = md_out_dir / f"{page_stem}_assets"
-        # re-open image to pass to rewriter
-        img = Image.open(img_path).convert("RGB")
-        cleaned_md = rewrite_md_with_embeds(
-            text_output=raw_md,
-            image=img,
-            output_dir=assets_dir,
-            base_img_name=page_stem,
-        )
+            page_stem = img_path.stem  # e.g. "page_001"
+            assets_dir = md_out_dir / f"{page_stem}_assets"
 
-        # 2.c write md
-        md_file = md_out_dir / f"{page_stem}.md"
-        md_file.write_text(cleaned_md, encoding="utf-8")
+            # ensure file handle closes immediately
+            with Image.open(img_path) as _img:
+                img = _img.convert("RGB")
 
-        logger.info(f"[OK] page {page_stem} --> {md_file}")
+            # re-open image to pass to rewriter
+            cleaned_md = rewrite_md_with_embeds(
+                text_output=raw_md,
+                image=img,
+                output_dir=assets_dir,
+                base_img_name=page_stem,
+            )
+
+            md_file = md_out_dir / f"{page_stem}.md"
+            md_file.write_text(cleaned_md, encoding="utf-8")
+
+            logger.info(f"[OK] page {page_stem} --> {md_file}")
+        except Exception:
+            logger.exception("Failed to process %s; skipping.", img_path.name)
 
     logger.info(f"Pipeline finished for {pdf_path} --> {cfg.output_dir}")
