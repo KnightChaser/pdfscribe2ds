@@ -115,5 +115,6 @@ class DeepSeekVL2Captioner:
                 "multi_modal_data": {"image": [safe_image]},  # list[PIL.Image]
             },
             sampling_params=self.sampling,
+            use_tqdm=False
         )
         return outputs[0].outputs[0].text.strip()
