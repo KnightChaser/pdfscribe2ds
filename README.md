@@ -7,6 +7,7 @@
 ```
 uv venv
 source .venv/bin/activate
+uv sync
 uv pip install -U vllm --pre --extra-index-url https://wheels.vllm.ai/nightly --extra-index-url https://download.pytorch.org/whl/cu129 --index-strategy unsafe-best-match
 ```
 
