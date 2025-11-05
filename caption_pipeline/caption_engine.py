@@ -73,6 +73,22 @@ def _prepare_image_for_vl2(img: Image.Image, min_side: int, max_side: int) -> Im
 
     return img
 
+def _truncate_context(ctx: str, max_chars: int = 4000) -> str:
+    """
+    Soft cap the context so we don't waste tokens. Keeps head and tail if too long.
+
+    Args:
+        ctx (str): The input context string.
+        max_chars (int): Maximum allowed characters in the context.
+
+    Returns:
+        str: The truncated context string.
+    """
+    if len(ctx) <= max_chars:
+        return ctx
+    half = max_chars // 2
+    return ctx[:half] + "\n...\n" + ctx[-half:]
+
 class DeepSeekVL2Captioner:
     """
     Thin captioner for DeepSeek-VL2 (tiny by default). Produces concise,
@@ -86,27 +102,58 @@ class DeepSeekVL2Captioner:
         extra = {"seed": self.cfg.seed} if cfg.seed is not None else {}
         self.llm = LLM(**(asdict(engine_dict) | extra))
 
-        # Default caption prompt
-        question="Describe the visual elements of this image exactly as they appear, and then interpret what are the given image(diagram) is meaning."
-        self.prompt_template = f"<|User|>: image_1:<image>\n{question}\n\n<|Assistant|>:"
+        # Default instruction
+        self.default_instruction = (
+            "Describe the visual elements of this image exactly as they appear, "
+            "and then interpret what the given image (diagram) is meaning."
+            "If the given image is just a text (e.g. only-text document or a code), then transcribe it verbatim,"
+            "even considering small details like indentation and line breaks."
+        )
+
+        # Role tokens kept consistent with your current style
+        self.user_template = (
+            "<|User|>: image_1:<image>\n"
+            "CONTEXT (page markdown):\n{context}\n\n"
+            "{instruction}\n\n"
+            "<|Assistant|>:"
+        )
 
         self.sampling = SamplingParams(
             temperature=0.0,
             max_tokens=256,
         )
 
-    def caption(self, image: Image.Image, prompt_override: str | None = None) -> str:
+    def _build_prompt(self, page_context: str, instruction: str) -> str:
+        """
+        Build the prompt for the captioning task.
+
+        Args:
+            page_context (str): The context of the page in markdown format.
+            instruction (str): The instruction for the captioning task.
+
+        Returns:
+            str: The constructed prompt string.
+        """
+        ctx = _truncate_context(page_context or "")
+        return self.user_template.format(context=ctx, instruction=instruction)
+
+    def caption(self, 
+                image: Image.Image, 
+                page_context: str = "",
+                prompt_override: str | None = None) -> str:
         """
         Generate a caption for the given image using DeepSeek-VL2.
 
         Args:
             image (PIL.Image): The input image to caption.
+            page_context (str): Optional context of the page in markdown format.
             prompt_override (str | None): Optional custom prompt to use instead of the default.
 
         Returns:
             str: The generated caption text.
         """
-        prompt = prompt_override or self.prompt_template
+        instruction = prompt_override or self.default_instruction
+        prompt = self._build_prompt(page_context=page_context, instruction=instruction)
         safe_image = _prepare_image_for_vl2(image, self.cfg.min_side, self.cfg.max_side)
 
         outputs = self.llm.generate(

@@ -50,21 +50,6 @@ def _resolve_image(md_file: Path, rel_path: str) -> Path:
     rel_path = rel_path.strip()
     return (md_file.parent / rel_path).resolve()
 
-
-def _build_line(alt_text: str, caption: str) -> str:
-    """
-    Build a markdown image line with the given alt text and caption.
-
-    Args:
-        alt_text (str): The alt text for the image.
-        caption (str): The generated caption for the image.
-
-    Returns:
-        str: The formatted markdown image line.
-    """
-    prefix = alt_text.strip() if alt_text.strip() else "Image"
-    return f"{prefix} (Interpreted and captioned): {caption}"
-
 def caption_markdown_file(
     md_file: Path,
     captioner: DeepSeekVL2Captioner,
@@ -94,7 +79,7 @@ def caption_markdown_file(
     captions_cache: Dict[str, str] = {}
 
     for m in matches:
-        # alt = m.group(1)
+        alt = m.group(1)
         rel = m.group(2)
         if rel in captions_cache:
             continue
@@ -107,7 +92,11 @@ def caption_markdown_file(
         try:
             with Image.open(img_path) as image:
                 with quiet.quiet_stdio():
-                    cap = captioner.caption(image.convert("RGB"), prompt_override=prompt_override)
+                    cap = captioner.caption(
+                        image.convert("RGB"),
+                        page_context=text,
+                        prompt_override=prompt_override,
+                    )
                 captions_cache[rel] = cap
                 logger.info("Captioned image: %s", img_path)
         except Exception as e:
