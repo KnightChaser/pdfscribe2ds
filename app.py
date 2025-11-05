@@ -4,7 +4,7 @@ import typer
 import logging
 from rich.logging import RichHandler
 
-from caption_pipeline.caption_pipeline import run_caption_pipeline
+from caption_pipeline.caption_pipeline import run_caption_pipeline, CaptionRewrite
 from ocr_pipeline.pipeline import run_pdf_pipeline
 from ocr_pipeline.batch import run_batch
 import quiet
@@ -93,6 +93,7 @@ def caption_md(
     seed: int = typer.Option(None, help="Optional RNG seed"),
     prompt: str = typer.Option(None, help="Override the default caption prompt"),
     log_level: str = typer.Option("INFO", help="Logging level (DEBUG, INFO, WARNING, ERROR)"),
+    rewrite_img_tags: str = typer.Option("append", help="How to rewrite image tags: 'append' (default) or 'replace'")
 ) -> None:
     """
     Caption images referenced in markdown/*.md by replacing image tags with
@@ -106,6 +107,7 @@ def caption_md(
         gpu_mem=gpu_mem,
         seed=seed,
         prompt=prompt,
+        rewrite=CaptionRewrite.APPEND if rewrite_img_tags.lower() == "append" else CaptionRewrite.REPLACE,
     )
 
     logging.getLogger("pdfscribe2ds").info("Captioning completed! --> %s", output_dir)

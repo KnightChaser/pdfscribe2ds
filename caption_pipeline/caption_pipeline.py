@@ -5,6 +5,7 @@ import logging
 import re
 from pathlib import Path
 from typing import Dict, Optional
+from enum import Enum
 
 from PIL import Image
 import quiet
@@ -15,6 +16,25 @@ logger = logging.getLogger("pdfscribe2ds")
 
 # Markdown image pattern: ![ALT](PATH)
 _IMG_TAG = re.compile(r'!\[(.*?)\]\((.*?)\)')
+
+class CaptionRewrite(str, Enum):
+    APPEND = "append"
+    REPLACE = "replace"
+
+def _render_caption_block(alt: str, cap: str) -> str:
+    """
+    Render a caption block in markdown format.
+
+    Args:
+        alt (str): The alt text of the image.
+        cap (str): The generated caption for the image.
+
+    Returns:
+        str: The formatted caption block in markdown.
+    """
+    prefix = (alt or "Image").strip()
+
+    return f"\n\n*{prefix} - {cap}*\n"
 
 def _resolve_image(md_file: Path, rel_path: str) -> Path:
     """
@@ -49,6 +69,7 @@ def caption_markdown_file(
     md_file: Path,
     captioner: DeepSeekVL2Captioner,
     prompt_override: Optional[str] = None,
+    rewrite: CaptionRewrite = CaptionRewrite.APPEND,
 ) -> bool:
     """
     Read a single Markdown file, caption each image tag, and rewrite the file in place.
@@ -58,6 +79,7 @@ def caption_markdown_file(
         md_file (Path): The markdown file to process.
         captioner (DeepSeekVL2Captioner): The captioner instance to use for generating captions.
         prompt_override (Optional[str]): Optional prompt to override the default captioning prompt.
+        rewrite (CaptionRewrite): Whether to append or replace captions in the markdown.
 
     Returns:
         bool: True if the file was modified, False otherwise.
@@ -99,7 +121,11 @@ def caption_markdown_file(
         cap = captions_cache.get(rel)
         if not cap:
             return m.group(0)  # no change
-        return _build_line(alt, cap)
+        if rewrite == CaptionRewrite.REPLACE:
+            return f"{(alt or 'Image').strip()} (Interpreted and captioned): {cap}"
+        # APPEND: keep original + caption
+        return f"{m.group(0)}{_render_caption_block(alt, cap)}"
+        
 
     new_text = _IMG_TAG.sub(repl, text)
     if new_text != text:
@@ -114,6 +140,7 @@ def run_caption_pipeline(
     gpu_mem: float = 0.7,
     seed: Optional[int] = None,
     prompt: Optional[str] = None,
+    rewrite: CaptionRewrite = CaptionRewrite.APPEND,
 ) -> None:
     """
     For a finished OCR run (with images/ and markdown/), caption the images referenced
@@ -148,7 +175,7 @@ def run_caption_pipeline(
     changed = 0
     for md_file in sorted(md_dir.glob("*.md")):
         try:
-            if caption_markdown_file(md_file, captioner, prompt_override=prompt):
+            if caption_markdown_file(md_file, captioner, prompt_override=prompt, rewrite=rewrite):
                 changed += 1
         except Exception:
             logger.exception("Failed to process %s", md_file.name)
