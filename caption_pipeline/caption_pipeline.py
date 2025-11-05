@@ -82,15 +82,15 @@ def caption_markdown_file(
             logger.warning("Image not found: %s (referenced in %s)", img_path, md_file)
             continue
 
-        # try:
-        with Image.open(img_path) as image:
-            with quiet.quiet_stdio():
-                cap = captioner.caption(image.convert("RGB"), prompt_override=prompt_override)
-            captions_cache[rel] = cap
-            logger.info("Captioned image: %s", img_path)
-        # except Exception as e:
-        #     logger.error("Failed to caption image %s: %s", img_path, e)
-        #     continue
+        try:
+            with Image.open(img_path) as image:
+                with quiet.quiet_stdio():
+                    cap = captioner.caption(image.convert("RGB"), prompt_override=prompt_override)
+                captions_cache[rel] = cap
+                logger.info("Captioned image: %s", img_path)
+        except Exception as e:
+            logger.error("Failed to caption image %s: %s", img_path, e)
+            continue
 
     # Replace tags with caption lines
     def repl(m: re.Match) -> str:
