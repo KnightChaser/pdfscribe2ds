@@ -1,5 +1,19 @@
 # pdfscribe2ds
 
+> **(WIP)** A tool to convert PDF documents to Markdown format using AI-powered OCR and optional image captioning.
+
+
+`pdfscribe2ds` processes PDF files by converting them to images, extracting text and structure using `DeepSeek-OCR`, and generating Markdown files. It can also add captions to images referenced in the Markdown using `DeepSeek-VL2` models.
+
+## Technical Aspects
+
+- Converts PDFs to high-resolution images using `pdf2image`
+- Uses `DeepSeek-OCR` model for optical character recognition and layout analysis
+- Generates Markdown with embedded images and text
+- Optional captioning of images with `DeepSeek-VL2` vision-language models
+- Supports batch processing of multiple PDFs
+- CLI interface built with `Typer`
+
 ## Setup
 
 1. Installing vLLM
