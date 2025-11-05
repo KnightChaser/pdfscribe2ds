@@ -4,6 +4,7 @@ import typer
 import logging
 from rich.logging import RichHandler
 
+from caption_pipeline.caption_pipeline import run_caption_pipeline
 from ocr_pipeline.pipeline import run_pdf_pipeline
 from ocr_pipeline.batch import run_batch
 import quiet
@@ -59,7 +60,7 @@ def pdf_to_md(
 
     logging.getLogger("pdfscribe2ds").info("Job completed! PDF processed --> %s", output_dir)
 
-@app.command("batch")
+@app.command("pdf-batch")
 def batch_pdfs(
     pdf_dir: Path = typer.Argument(..., exists=True, readable=True, file_okay=False, help="Directory containing PDF files"),
     output_dir: Path = typer.Option(Path("./outputs"), help="Root output directory"),
@@ -84,6 +85,30 @@ def batch_pdfs(
         num_threads=num_threads,
     )
 
+@app.command("caption")
+def caption_md(
+    output_dir: Path = typer.Argument(..., exists=True, readable=True, file_okay=False, help="Root output dir that contains markdown/ and images/"),
+    caption_model: str = typer.Option("deepseek-ai/deepseek-vl2-tiny", help="DeepSeek VL2 model for captioning"),
+    gpu_mem: float = typer.Option(0.7, help="GPU memory utilization for vLLM (0-1)"),
+    seed: int = typer.Option(None, help="Optional RNG seed"),
+    prompt: str = typer.Option(None, help="Override the default caption prompt"),
+    log_level: str = typer.Option("INFO", help="Logging level (DEBUG, INFO, WARNING, ERROR)"),
+) -> None:
+    """
+    Caption images referenced in markdown/*.md by replacing image tags with
+    'Image N (Interpreted and captioned): <text>'.
+    """
+    setup_logging(log_level.upper())
+
+    run_caption_pipeline(
+        output_dir=output_dir,
+        caption_model=caption_model,
+        gpu_mem=gpu_mem,
+        seed=seed,
+        prompt=prompt,
+    )
+
+    logging.getLogger("pdfscribe2ds").info("Captioning completed! --> %s", output_dir)
 
 if __name__ == "__main__":
     app()
