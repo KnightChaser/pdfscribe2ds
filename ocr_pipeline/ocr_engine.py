@@ -64,7 +64,7 @@ class DeepSeekOCREngine:
             skip_special_tokens=False,
         )
 
-        outputs = self.llm.generate(model_input, sampling_param)  # type: ignore
+        outputs = self.llm.generate(model_input, sampling_param, use_tqdm=False)  # type: ignore
         text_output = outputs[0].outputs[0].text
         return text_output
 
