@@ -7,7 +7,8 @@
 ```
 uv venv
 source .venv/bin/activate
-uv pip install -U vllm --pre --extra-index-url https://wheels.vllm.ai/nightly
-
+uv pip install -U vllm --pre --extra-index-url https://wheels.vllm.ai/nightly --extra-index-url https://download.pytorch.org/whl/cu129 --index-strategy unsafe-best-match
 ```
 
+Currently, you have to install vLLM nightly builds to get the features to use DeepSeek-based models. (Required VLLM: `>=0.11.1`).
+Refer to the [related issue](https://github.com/vllm-project/vllm/issues/28030) for more details.
