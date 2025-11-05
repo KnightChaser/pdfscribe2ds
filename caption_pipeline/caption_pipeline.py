@@ -79,7 +79,7 @@ def caption_markdown_file(
     captions_cache: Dict[str, str] = {}
 
     for m in matches:
-        alt = m.group(1)
+        # alt = m.group(1)
         rel = m.group(2)
         if rel in captions_cache:
             continue
